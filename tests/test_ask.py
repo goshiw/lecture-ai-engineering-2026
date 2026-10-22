@@ -50,3 +50,17 @@ def test_chat_loop_stops_on_exit_word_and_eof():
 
     ask.chat_loop(make_chat(models), "Q1", read=eof)
     assert len(models.calls) == 2
+
+
+def test_main_chat_keeps_client_open(monkeypatch):
+    """--chat の会話中に genai.Client が閉じられていないこと（閉じると送信時に RuntimeError になる）。"""
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+    monkeypatch.setattr("sys.argv", ["ask", "--chat", "Q1"])
+    seen = []
+
+    def fake_loop(chat, question, read=input):
+        seen.append(chat._modules._api_client._httpx_client.is_closed)
+
+    monkeypatch.setattr(ask, "chat_loop", fake_loop)
+    ask.main()
+    assert seen == [False]

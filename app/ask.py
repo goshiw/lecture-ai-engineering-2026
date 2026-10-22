@@ -39,12 +39,6 @@ def ask(question: str) -> str:
     return response.text
 
 
-def start_chat() -> chats.Chat:
-    """会話履歴を保持するチャットを作る。send_message するたびに、履歴が Chat の中に溜まる。"""
-    client = genai.Client(api_key=get_api_key())
-    return client.chats.create(model=MODEL)
-
-
 def chat_loop(chat: chats.Chat, question: str, read: Callable[[str], str] = input) -> None:
     """最初の質問に答えたあと、空行か exit が入力されるまで続けて質問を受け付ける。"""
     while True:
@@ -73,7 +67,10 @@ def main() -> None:
     print(f"[model] {MODEL}")
     print(f"[質問] {args.question}\n")
     if args.chat:
-        chat_loop(start_chat(), args.question)
+        # Client は破棄されると通信を閉じるので、会話が終わるまで with で開いておく。
+        # Chat は send_message のたびに、それまでの履歴を付けて送る
+        with genai.Client(api_key=get_api_key()) as client:
+            chat_loop(client.chats.create(model=MODEL), args.question)
         return
     try:
         print(ask(args.question))

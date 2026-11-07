@@ -77,3 +77,38 @@ def get_lecture_summary(lecture: int) -> str:
         available = sorted(p.stem for p in (DATA_DIR / "lectures").glob("*.md"))
         return f"第{lecture}回の要点はまだありません。用意されている回: {', '.join(available)}"
     return path.read_text(encoding="utf-8")
+
+def make_quiz(lecture: int) -> str:
+    """指定した回の用語から1つを選び、
+    確認問題と答えを返す。
+ 
+    「第2回の確認問題を出して」のように、
+    復習用の問題を求められたときに使う。
+    """
+    import random
+
+    # 1. load_glossary() から lecture が一致する用語を集める
+    terms = [e for e in load_glossary() if e["lecture"] == lecture]
+    if not terms:
+        return f"第{lecture}回の用語はまだありません。"
+    
+    # 2. 1 つ選ぶ（random.choice）
+    term = random.choice(terms)
+    question = f"第{lecture}回の確認問題: 「{term['term']}」とは何ですか？"
+    answer = term["definition"]
+    
+    # 3. 問題と答えを文字列で返す（json.dumps など）
+    return json.dumps({"question": question, "answer": answer}, ensure_ascii=False)
+
+def save_learning_log(lecture: int, content: str) -> str:
+    """指定した回の学習記録をlearning_log/ フォルダに保存する。
+
+    requires_approval=True にして、保存前に利用者の確認を挟む。
+    """
+    from pathlib import Path
+
+    log_dir = DATA_DIR / "learning_log"
+    log_dir.mkdir(exist_ok=True)
+    path = log_dir / f"{lecture:02d}.txt"
+    path.write_text(content, encoding="utf-8")
+    return f"第{lecture}回の学習記録を保存しました: {path}"
